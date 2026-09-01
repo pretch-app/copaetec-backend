@@ -2,7 +2,7 @@ import { sql } from "@/lib/db"
 import { getTeams } from "@/lib/queries"
 import { requireAdmin } from "@/lib/auth"
 import { jsonCors, preflight } from "@/lib/cors"
-import { handleApiError } from "@/lib/api-helpers"
+import { handleApiError, toBool, validateRequestOrigin } from "@/lib/api-helpers"
 
 export async function OPTIONS(request: Request) {
   return preflight(request)
@@ -10,14 +10,16 @@ export async function OPTIONS(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const originError = validateRequestOrigin(request)
+    if (originError) return originError
     await requireAdmin()
     const body = await request.json()
-    const isDoubleRoundRobin = Boolean(body.double_round_robin)
-    const clearExisting = Boolean(body.clear_existing)
-    const randomize = Boolean(body.randomize)
+    const isDoubleRoundRobin = toBool(body.double_round_robin) ?? false
+    const clearExisting = toBool(body.clear_existing) ?? false
+    const randomize = toBool(body.randomize) ?? false
 
     if (clearExisting) {
-      await sql`DELETE FROM matches WHERE stage = 'group' OR stage IS NULL`
+      await sql`DELETE FROM matches WHERE (stage = 'group' OR stage IS NULL) AND COALESCE(status, 'scheduled') <> 'finished'`
     }
 
     const allTeams = await getTeams()

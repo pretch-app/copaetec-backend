@@ -2,7 +2,7 @@ import { sql } from "@/lib/db"
 import { getMatchById } from "@/lib/queries"
 import { requireUser } from "@/lib/auth"
 import { checkRateLimit } from "@/lib/rate-limit"
-import { getClientIp, handleApiError } from "@/lib/api-helpers"
+import { getClientIp, handleApiError, validateRequestOrigin } from "@/lib/api-helpers"
 import { jsonCors, preflight } from "@/lib/cors"
 
 export async function OPTIONS(request: Request) {
@@ -11,6 +11,8 @@ export async function OPTIONS(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const originError = validateRequestOrigin(request)
+    if (originError) return originError
     const user = await requireUser()
 
     const ip = await getClientIp(request)

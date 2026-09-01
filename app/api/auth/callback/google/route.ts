@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { createUserSession } from "@/lib/auth"
-import { randomBytes } from "crypto"
+import { isAllowedEmailDomain } from "@/lib/email"
+import { cookies } from "next/headers"
+import { randomBytes, timingSafeEqual } from "crypto"
+
+function matchesSecret(expected: string | undefined, actual: string | null): boolean {
+  if (!expected || !actual || expected.length !== actual.length) return false
+  return timingSafeEqual(Buffer.from(expected), Buffer.from(actual))
+}
 
 function frontendUrl(path: string) {
   const base = process.env.FRONTEND_URL
@@ -13,9 +20,13 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const code = searchParams.get("code")
+    const state = searchParams.get("state")
     const error = searchParams.get("error")
+    const cookieStore = await cookies()
+    const expectedState = cookieStore.get("oauth_state")?.value
+    const expectedNonce = cookieStore.get("oauth_nonce")?.value
 
-    if (error || !code) {
+    if (error || !code || !matchesSecret(expectedState, state)) {
       return NextResponse.redirect(frontendUrl("/auth/login?error=Cancelado"))
     }
 
@@ -50,6 +61,26 @@ export async function GET(request: Request) {
       return NextResponse.redirect(frontendUrl("/auth/login?error=TokenError"))
     }
 
+    const idToken = tokenData.id_token
+    if (!idToken) {
+      return NextResponse.redirect(frontendUrl("/auth/login?error=TokenError"))
+    }
+
+    const tokenInfoResponse = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
+    )
+    const tokenInfo = await tokenInfoResponse.json()
+    const validIssuer = tokenInfo.iss === "accounts.google.com" || tokenInfo.iss === "https://accounts.google.com"
+    if (
+      !tokenInfoResponse.ok ||
+      tokenInfo.aud !== clientId ||
+      !validIssuer ||
+      tokenInfo.email_verified !== "true" ||
+      !matchesSecret(expectedNonce, tokenInfo.nonce)
+    ) {
+      return NextResponse.redirect(frontendUrl("/auth/login?error=TokenError"))
+    }
+
     // Obtener información del usuario
     const userResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
@@ -64,20 +95,12 @@ export async function GET(request: Request) {
     const email = userData.email.toLowerCase().trim()
     const name = userData.name || "Usuario"
 
-    // Validar el dominio permitido (por defecto los de la institución)
-    const allowedDomainsEnv = process.env.ALLOWED_EMAIL_DOMAINS?.toLowerCase().trim()
-      || "@etec.um.edu.ar,@um.edu.ar,@alumno.etec.um.edu.ar"
-
-    if (allowedDomainsEnv) {
-      const allowedDomains = allowedDomainsEnv.split(',').map(d => d.trim().replace(/^@/, ''))
-      const emailDomain = email.split('@')[1]
-
-      const hasValidDomain = allowedDomains.some(domain => emailDomain === domain || email.endsWith(`@${domain}`))
-
-      if (!hasValidDomain) {
-        return NextResponse.redirect(frontendUrl("/auth/login?error=DomainNotAllowed"))
-      }
+    if (!isAllowedEmailDomain(email)) {
+      return NextResponse.redirect(frontendUrl("/auth/login?error=DomainNotAllowed"))
     }
+
+    cookieStore.delete("oauth_state")
+    cookieStore.delete("oauth_nonce")
 
     // Buscar si el usuario ya existe en la base de datos
     const existingUser = await sql`SELECT id, role FROM users WHERE email = ${email} LIMIT 1`

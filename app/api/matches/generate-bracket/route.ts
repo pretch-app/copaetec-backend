@@ -2,7 +2,7 @@ import { sql } from "@/lib/db"
 import { getTournamentSettings, getStandings } from "@/lib/queries"
 import { requireAdmin } from "@/lib/auth"
 import { jsonCors, preflight } from "@/lib/cors"
-import { handleApiError } from "@/lib/api-helpers"
+import { handleApiError, validateRequestOrigin } from "@/lib/api-helpers"
 
 export async function OPTIONS(request: Request) {
   return preflight(request)
@@ -10,6 +10,8 @@ export async function OPTIONS(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const originError = validateRequestOrigin(request)
+    if (originError) return originError
     await requireAdmin()
 
     const settings = await getTournamentSettings()

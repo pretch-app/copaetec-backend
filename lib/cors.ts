@@ -7,20 +7,25 @@ function getAllowedOrigins(): string[] {
     .filter(Boolean)
 }
 
-function resolveOrigin(request: Request): string {
+function isOriginAllowed(request: Request, origin: string): boolean {
+  return origin === new URL(request.url).origin || getAllowedOrigins().includes(origin)
+}
+
+function resolveOrigin(request: Request): string | null {
   const origin = request.headers.get("origin") ?? ""
-  const allowed = getAllowedOrigins()
-  return allowed.includes(origin) ? origin : allowed[0]
+  return isOriginAllowed(request, origin) ? origin : null
 }
 
 export function corsHeaders(request: Request): HeadersInit {
-  return {
-    "Access-Control-Allow-Origin": resolveOrigin(request),
+  const origin = resolveOrigin(request)
+  const headers: Record<string, string> = {
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     Vary: "Origin",
   }
+  if (origin) headers["Access-Control-Allow-Origin"] = origin
+  return headers
 }
 
 export function withCors(request: Request, response: NextResponse): NextResponse {
@@ -37,5 +42,9 @@ export function jsonCors(request: Request, body: unknown, init?: number | Respon
 }
 
 export function preflight(request: Request): NextResponse {
+  const origin = request.headers.get("origin")
+  if (origin && !isOriginAllowed(request, origin)) {
+    return new NextResponse(null, { status: 403 })
+  }
   return new NextResponse(null, { status: 204, headers: corsHeaders(request) })
 }

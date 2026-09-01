@@ -2,7 +2,7 @@ import { sql } from "@/lib/db"
 import { getTeams } from "@/lib/queries"
 import { requireAdmin } from "@/lib/auth"
 import { jsonCors, preflight } from "@/lib/cors"
-import { handleApiError, toStr } from "@/lib/api-helpers"
+import { handleApiError, toStr, validateRequestOrigin } from "@/lib/api-helpers"
 import { slugify } from "@/lib/slugify"
 
 export async function OPTIONS(request: Request) {
@@ -20,6 +20,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const originError = validateRequestOrigin(request)
+    if (originError) return originError
     await requireAdmin()
     const body = await request.json()
     const name = toStr(body.name)

@@ -2,7 +2,7 @@ import { sql } from "@/lib/db"
 import { getAllPlayers } from "@/lib/queries"
 import { requireAdmin } from "@/lib/auth"
 import { jsonCors, preflight } from "@/lib/cors"
-import { handleApiError, toInt, toStr } from "@/lib/api-helpers"
+import { handleApiError, toInt, toStr, validateRequestOrigin } from "@/lib/api-helpers"
 
 export async function OPTIONS(request: Request) {
   return preflight(request)
@@ -19,6 +19,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const originError = validateRequestOrigin(request)
+    if (originError) return originError
     await requireAdmin()
     const body = await request.json()
     const teamId = toInt(body.team_id)

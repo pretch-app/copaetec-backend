@@ -1,7 +1,7 @@
 import { sql } from "@/lib/db"
 import { verifyPasswordHash, createUserSession } from "@/lib/auth"
 import { checkRateLimit } from "@/lib/rate-limit"
-import { getClientIp } from "@/lib/api-helpers"
+import { getClientIp, validateRequestOrigin } from "@/lib/api-helpers"
 import { jsonCors, preflight } from "@/lib/cors"
 
 export async function OPTIONS(request: Request) {
@@ -9,6 +9,9 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const originError = validateRequestOrigin(request)
+  if (originError) return originError
+
   const ip = await getClientIp(request)
   const rl = checkRateLimit(`login:${ip}`, 5, 15 * 60 * 1000) // 5 intentos cada 15 min
   if (!rl.allowed) return jsonCors(request, { error: "Demasiados intentos. Intenta más tarde." }, 429)
