@@ -110,4 +110,6 @@ Sesión basada en cookie httpOnly (`etec_session`, JWT firmado a mano) seteada p
 ## Notas
 
 - El *rate limiting* (`lib/rate-limit.ts`) es en memoria — en Vercel (serverless) cada instancia tiene su propio contador, así que es una protección básica, no estricta.
+- Las mutaciones requieren `Origin` o `Referer` del frontend configurado en `ALLOWED_ORIGINS`; esto protege las cookies de sesión contra CSRF.
+- Las imágenes aceptadas son JPEG, PNG o WebP y tienen un límite de 4MB para mantenerse dentro de los límites de las funciones de Vercel.
 - `scripts/` y `scratch/` contienen utilidades puntuales de migración de datos que se ejecutan a mano contra `DATABASE_URL` (no forman parte del build de la API).

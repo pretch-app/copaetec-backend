@@ -2,7 +2,7 @@ import { sql } from "@/lib/db"
 import { getMatches } from "@/lib/queries"
 import { requireAdmin } from "@/lib/auth"
 import { jsonCors, preflight } from "@/lib/cors"
-import { handleApiError, toInt, toStr } from "@/lib/api-helpers"
+import { handleApiError, toInt, toStr, validateRequestOrigin } from "@/lib/api-helpers"
 
 const VALID_STAGES = ["group", "round_of_16", "quarter_finals", "semi_finals", "final"]
 
@@ -21,6 +21,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const originError = validateRequestOrigin(request)
+    if (originError) return originError
     await requireAdmin()
     const body = await request.json()
     const homeId = toInt(body.home_team_id)

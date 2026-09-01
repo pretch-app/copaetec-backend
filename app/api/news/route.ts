@@ -3,8 +3,9 @@ import { sql } from "@/lib/db"
 import { getAllNews } from "@/lib/queries"
 import { requireAdmin } from "@/lib/auth"
 import { jsonCors, preflight } from "@/lib/cors"
-import { handleApiError, toStr } from "@/lib/api-helpers"
+import { handleApiError, toStr, validateRequestOrigin } from "@/lib/api-helpers"
 import { slugify } from "@/lib/slugify"
+import { isValidImageFile } from "@/lib/uploads"
 
 export async function OPTIONS(request: Request) {
   return preflight(request)
@@ -21,6 +22,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const originError = validateRequestOrigin(request)
+    if (originError) return originError
     const user = await requireAdmin()
     const formData = await request.formData()
     const title = toStr(formData.get("title"))
@@ -33,8 +36,8 @@ export async function POST(request: Request) {
 
     let imageUrl: string | null = null
     if (file && file.size > 0) {
-      if (file.size > 10 * 1024 * 1024) return jsonCors(request, { error: "El archivo no puede pesar más de 10MB" }, 400)
-      if (!file.type.startsWith("image/")) return jsonCors(request, { error: "El archivo debe ser una imagen" }, 400)
+       if (file.size > 4 * 1024 * 1024) return jsonCors(request, { error: "El archivo no puede pesar más de 4MB" }, 400)
+       if (!(await isValidImageFile(file))) return jsonCors(request, { error: "Formato de imagen no permitido" }, 400)
       const blob = await put(`news/${Date.now()}-${slugify(file.name)}`, file, { access: "public" })
       imageUrl = blob.url
     }

@@ -61,8 +61,16 @@ function verifyJWT(token: string): { userId: number; role: string; exp: number }
 
   try {
     const payload = JSON.parse(Buffer.from(payloadStr.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString())
-    if (payload.exp && Date.now() >= payload.exp) return null
-    return payload
+    if (
+      !Number.isSafeInteger(payload.userId) ||
+      payload.userId < 1 ||
+      typeof payload.role !== "string" ||
+      !Number.isSafeInteger(payload.exp) ||
+      Date.now() >= payload.exp
+    ) {
+      return null
+    }
+    return payload as { userId: number; role: string; exp: number }
   } catch {
     return null
   }
