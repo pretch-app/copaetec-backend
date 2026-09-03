@@ -4,6 +4,7 @@ import { sql } from "./db"
 import type { User } from "./types"
 
 const COOKIE_NAME = "etec_session"
+const SESSION_DURATION_SECONDS = 60 * 60 * 24 // 24 horas
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET
   if (!secret) {
@@ -78,7 +79,7 @@ function verifyJWT(token: string): { userId: number; role: string; exp: number }
 
 export async function createUserSession(userId: number, role: string) {
   const store = await cookies()
-  const exp = Date.now() + 1000 * 60 * 60 * 24 * 7 // 7 days
+  const exp = Date.now() + SESSION_DURATION_SECONDS * 1000
   const token = signJWT({ userId, role, exp })
   
   // El backend y el frontend viven en dominios/proyectos distintos (Vercel separados),
@@ -91,7 +92,7 @@ export async function createUserSession(userId: number, role: string) {
     sameSite: crossOrigin ? "none" : "lax",
     secure: crossOrigin,
     path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: SESSION_DURATION_SECONDS,
   })
 }
 
