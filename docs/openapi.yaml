@@ -1,0 +1,605 @@
+openapi: 3.0.3
+info:
+  title: Copa ETec API
+  version: 0.1.0
+  description: API REST del torneo Copa ETec.
+servers:
+  - url: /
+    description: Servidor donde está desplegada la API
+tags:
+  - name: Autenticación
+  - name: Torneo
+  - name: Equipos
+  - name: Partidos
+  - name: Predicciones
+  - name: Administración
+paths:
+  /api/auth/google:
+    get:
+      tags: [Autenticación]
+      summary: Inicia el login con Google
+      responses:
+        '302': { description: Redirección a Google }
+  /api/auth/callback/google:
+    get:
+      tags: [Autenticación]
+      summary: Procesa el callback de Google
+      responses:
+        '302': { description: Redirección al frontend }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Inicia sesión con email y contraseña
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/register:
+    post:
+      tags: [Autenticación]
+      summary: Registra un usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { description: El email ya está registrado }
+  /api/auth/logout:
+    post:
+      tags: [Autenticación]
+      summary: Cierra la sesión actual
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /api/auth/me:
+    get:
+      tags: [Autenticación]
+      summary: Devuelve el usuario autenticado
+      responses:
+        '200':
+          description: Usuario actual o null
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { nullable: true, allOf: [{ $ref: '#/components/schemas/User' }] }
+  /api/teams:
+    get:
+      tags: [Equipos]
+      summary: Lista los equipos
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+    post:
+      tags: [Administración]
+      summary: Crea un equipo
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TeamRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/teams/slug/{slug}:
+    get:
+      tags: [Equipos]
+      summary: Obtiene un equipo por su slug
+      parameters:
+        - { $ref: '#/components/parameters/Slug' }
+      responses:
+        '200': { $ref: '#/components/responses/Object' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/teams/{id}:
+    patch:
+      tags: [Administración]
+      summary: Edita un equipo
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      requestBody:
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/TeamRequest' } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Administración]
+      summary: Elimina un equipo
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/teams/{id}/players:
+    get:
+      tags: [Equipos]
+      summary: Lista los jugadores de un equipo
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+  /api/teams/{id}/matches:
+    get:
+      tags: [Equipos]
+      summary: Lista los partidos de un equipo
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+  /api/teams/{id}/photo:
+    post:
+      tags: [Administración]
+      summary: Sube la foto de un equipo
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo: { type: string, format: binary }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/teams/{id}/escudo:
+    post:
+      tags: [Administración]
+      summary: Sube el escudo de un equipo
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [escudo]
+              properties:
+                escudo: { type: string, format: binary }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/players:
+    get:
+      tags: [Torneo]
+      summary: Lista todos los jugadores
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+    post:
+      tags: [Administración]
+      summary: Crea un jugador
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { type: object, required: [team_id, name] } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/players/{id}:
+    delete:
+      tags: [Administración]
+      summary: Elimina un jugador
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/matches:
+    get:
+      tags: [Partidos]
+      summary: Lista los partidos
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+    post:
+      tags: [Administración]
+      summary: Crea un partido
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { type: object, required: [home_team_id, away_team_id] } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/matches/finished:
+    get:
+      tags: [Partidos]
+      summary: Lista los partidos finalizados
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+  /api/matches/live:
+    get:
+      tags: [Partidos]
+      summary: Lista los resultados en vivo
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+  /api/matches/{id}:
+    get:
+      tags: [Partidos]
+      summary: Obtiene un partido
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { $ref: '#/components/responses/Object' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Administración]
+      summary: Actualiza un partido
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      requestBody:
+        content:
+          application/json: { schema: { type: object } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Administración]
+      summary: Elimina un partido
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/matches/{id}/events:
+    get:
+      tags: [Partidos]
+      summary: Lista los eventos de un partido
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+    post:
+      tags: [Administración]
+      summary: Agrega un evento a un partido
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      requestBody:
+        content:
+          application/json: { schema: { type: object } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/matches/{id}/extras:
+    patch:
+      tags: [Administración]
+      summary: Actualiza penales y tiempo extra
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      requestBody:
+        content:
+          application/json: { schema: { type: object } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/matches/generate-fixture:
+    post:
+      tags: [Administración]
+      summary: Genera el fixture de grupos
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/matches/generate-bracket:
+    post:
+      tags: [Administración]
+      summary: Genera las llaves de eliminación
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/events:
+    get:
+      tags: [Partidos]
+      summary: Lista todos los eventos
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+  /api/events/{id}:
+    delete:
+      tags: [Administración]
+      summary: Elimina un evento
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/gallery:
+    get:
+      tags: [Torneo]
+      summary: Lista las fotos de la galería
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+    post:
+      tags: [Administración]
+      summary: Sube una foto a la galería
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data: { schema: { type: object } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/gallery/{id}:
+    delete:
+      tags: [Administración]
+      summary: Elimina una foto de la galería
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/news:
+    get:
+      tags: [Torneo]
+      summary: Lista las noticias
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+    post:
+      tags: [Administración]
+      summary: Crea una noticia
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data: { schema: { type: object, required: [title, content] } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/news/{id}:
+    get:
+      tags: [Torneo]
+      summary: Obtiene una noticia
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { $ref: '#/components/responses/Object' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Administración]
+      summary: Elimina una noticia
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/standings:
+    get:
+      tags: [Torneo]
+      summary: Devuelve la tabla de posiciones
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+  /api/scorers:
+    get:
+      tags: [Torneo]
+      summary: Devuelve los goleadores
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 10 } }
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+  /api/stats:
+    get:
+      tags: [Torneo]
+      summary: Devuelve estadísticas del torneo
+      responses:
+        '200': { $ref: '#/components/responses/Object' }
+  /api/settings:
+    get:
+      tags: [Torneo]
+      summary: Obtiene la configuración del torneo
+      responses:
+        '200': { $ref: '#/components/responses/Object' }
+    patch:
+      tags: [Administración]
+      summary: Actualiza la configuración del torneo
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        content:
+          application/json: { schema: { type: object } }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/predictions:
+    post:
+      tags: [Predicciones]
+      summary: Guarda una predicción
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [match_id, predicted_home, predicted_away]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/predictions/upcoming:
+    get:
+      tags: [Predicciones]
+      summary: Lista partidos habilitados para predicción
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+  /api/predictions/me:
+    get:
+      tags: [Predicciones]
+      summary: Lista las predicciones del usuario actual
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/predictions/ranking:
+    get:
+      tags: [Predicciones]
+      summary: Devuelve el ranking del prode
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 100 } }
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+  /api/predictions/stats/me:
+    get:
+      tags: [Predicciones]
+      summary: Devuelve estadísticas del usuario actual
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Object' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/users:
+    get:
+      tags: [Administración]
+      summary: Lista los usuarios
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Array' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/users/{id}:
+    delete:
+      tags: [Administración]
+      summary: Elimina un usuario
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: etec_session
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    Slug:
+      name: slug
+      in: path
+      required: true
+      schema: { type: string }
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string, format: email }
+        display_name: { type: string }
+        role: { type: string, enum: [user, admin] }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    RegisterRequest:
+      type: object
+      required: [name, email, password, confirmPassword]
+      properties:
+        name: { type: string, minLength: 2 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 6, format: password }
+        confirmPassword: { type: string, format: password }
+    TeamRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        captain: { type: string, nullable: true }
+        grupo: { type: string, nullable: true }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+    Success:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+  responses:
+    Success:
+      description: Operación exitosa
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/Success' } }
+    Array:
+      description: Lista de resultados
+      content:
+        application/json: { schema: { type: array, items: { type: object } } }
+    Object:
+      description: Resultado de la consulta
+      content:
+        application/json: { schema: { type: object } }
+    BadRequest:
+      description: Petición inválida
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/Error' } }
+    Unauthorized:
+      description: No autenticado
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/Error' } }
+    Forbidden:
+      description: Sin permisos suficientes
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/Error' } }
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/Error' } }

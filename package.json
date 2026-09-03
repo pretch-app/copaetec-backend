@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start -p 4000",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:coverage": "vitest run --coverage",
+    "docs:generate": "tsx scripts/generate-openapi.ts",
+    "docs:validate": "tsx scripts/validate-openapi.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -21,10 +27,13 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^5.0.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.4",
     "pg": "^8.23.0",
     "tsx": "^4.23.13",
-    "typescript": "5.7.3"
+    "typescript": "5.7.3",
+    "vitest": "^5.0.0",
+    "yaml": "^2.9.0"
   }
 }

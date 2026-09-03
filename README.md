@@ -34,6 +34,24 @@ npm run dev
 
 Corre en `http://localhost:4000`. El frontend debe correr en un puerto distinto (por defecto `http://localhost:3000`) y apuntar `NEXT_PUBLIC_API_URL` a esta URL.
 
+## Calidad y documentación
+
+Los Pull Requests hacia `main` ejecutan automáticamente los workflows de GitHub Actions ubicados en `.github/workflows/`:
+
+- Testing: lint, typecheck, pruebas unitarias, pruebas integrales contra la base configurada en `DATABASE_URL_TEST` y build.
+- Documentation: generación y validación de `docs/openapi.json` a partir de `docs/openapi.yaml`.
+
+La variable `DATABASE_URL_TEST` debe apuntar a una base Neon exclusiva para pruebas. No debe contener la URL de producción. En GitHub se configura como un secreto del repositorio con ese mismo nombre. Estos workflows no modifican la configuración de Vercel ni sus despliegues automáticos.
+
+Para ejecutar las comprobaciones localmente:
+
+```bash
+npm run test:unit
+npm run test:integration
+npm run docs:generate
+npm run docs:validate
+```
+
 ## Autenticación
 
 Sesión basada en cookie httpOnly (`etec_session`, JWT firmado a mano) seteada por el backend. Como backend y frontend son orígenes distintos, todas las peticiones desde el frontend deben incluir `credentials: "include"`, y la cookie usa `SameSite=None; Secure` en producción (ver `lib/auth.ts`).
