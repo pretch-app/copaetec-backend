@@ -3,6 +3,9 @@ import { hashPassword, verifyPasswordHash } from "@/lib/auth"
 import { toBool, toInt, toStr } from "@/lib/api-helpers"
 import { isAllowedEmailDomain } from "@/lib/email"
 import { slugify } from "@/lib/slugify"
+import { calculatePoints } from "@/lib/predictions"
+import { normalizeFinishedMatch } from "@/lib/queries"
+import type { Match } from "@/lib/types"
 
 describe("slugify", () => {
   it("normalizes accents, spaces and punctuation", () => {
@@ -24,6 +27,29 @@ describe("request helpers", () => {
     expect(toBool("true")).toBe(true)
     expect(toBool("false")).toBe(false)
     expect(toBool("yes")).toBeNull()
+  })
+})
+
+describe("finished matches without goals", () => {
+  it("treats missing finished scores as a 0-0 draw", () => {
+    const match = {
+      status: "finished",
+      home_score: null,
+      away_score: null,
+    } as Match
+
+    expect(normalizeFinishedMatch(match)).toMatchObject({ home_score: 0, away_score: 0 })
+    expect(calculatePoints(0, 0, 0, 0)).toBe(5)
+  })
+
+  it("does not assign a score to scheduled matches", () => {
+    const match = {
+      status: "scheduled",
+      home_score: null,
+      away_score: null,
+    } as Match
+
+    expect(normalizeFinishedMatch(match)).toBe(match)
   })
 })
 

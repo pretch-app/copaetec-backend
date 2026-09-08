@@ -37,7 +37,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       UPDATE matches
       SET home_penalties = ${homePenalties}, away_penalties = ${awayPenalties},
           is_extra_time = COALESCE(${isExtraTime}, is_extra_time),
-          status = COALESCE(${status}, status)
+          status = COALESCE(${status}, status),
+          home_score = CASE
+            WHEN COALESCE(${status}, status) = 'finished' THEN COALESCE(home_score, 0)
+            ELSE home_score
+          END,
+          away_score = CASE
+            WHEN COALESCE(${status}, status) = 'finished' THEN COALESCE(away_score, 0)
+            ELSE away_score
+          END
       WHERE id = ${id}
     `
 

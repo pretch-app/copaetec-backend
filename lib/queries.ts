@@ -26,8 +26,18 @@ const matchSelect = `
   JOIN teams at ON at.id = m.away_team_id
 `
 
+export function normalizeFinishedMatch(match: Match): Match {
+  if (match.status !== "finished") return match
+
+  return {
+    ...match,
+    home_score: match.home_score ?? 0,
+    away_score: match.away_score ?? 0,
+  }
+}
+
 export async function getMatches(): Promise<Match[]> {
-  return (await sql`
+  const matches = (await sql`
     SELECT m.*, 
       ht.name AS home_name, ht.slug AS home_slug, ht.escudo_url AS home_escudo_url,
       at.name AS away_name, at.slug AS away_slug, at.escudo_url AS away_escudo_url
@@ -36,10 +46,12 @@ export async function getMatches(): Promise<Match[]> {
     JOIN teams at ON at.id = m.away_team_id
     ORDER BY m.matchday ASC, m.kickoff ASC NULLS LAST, m.id ASC
   `) as Match[]
+
+  return matches.map(normalizeFinishedMatch)
 }
 
 export async function getFinishedMatches(): Promise<Match[]> {
-  return (await sql`
+  const matches = (await sql`
     SELECT m.*, 
       ht.name AS home_name, ht.slug AS home_slug, ht.escudo_url AS home_escudo_url,
       at.name AS away_name, at.slug AS away_slug, at.escudo_url AS away_escudo_url
@@ -49,6 +61,8 @@ export async function getFinishedMatches(): Promise<Match[]> {
     WHERE m.status = 'finished'
     ORDER BY m.matchday DESC, m.kickoff DESC NULLS LAST, m.id DESC
   `) as Match[]
+
+  return matches.map(normalizeFinishedMatch)
 }
 
 export async function getMatchById(id: number): Promise<Match | null> {
@@ -61,7 +75,7 @@ export async function getMatchById(id: number): Promise<Match | null> {
     JOIN teams at ON at.id = m.away_team_id
     WHERE m.id = ${id} LIMIT 1
   `) as Match[]
-  return rows[0] ?? null
+  return rows[0] ? normalizeFinishedMatch(rows[0]) : null
 }
 
 export async function getEventsByMatch(matchId: number): Promise<MatchEvent[]> {
@@ -69,7 +83,7 @@ export async function getEventsByMatch(matchId: number): Promise<MatchEvent[]> {
 }
 
 export async function getMatchesByTeam(teamId: number): Promise<Match[]> {
-  return (await sql`
+  const matches = (await sql`
     SELECT m.*, 
       ht.name AS home_name, ht.slug AS home_slug, ht.escudo_url AS home_escudo_url,
       at.name AS away_name, at.slug AS away_slug, at.escudo_url AS away_escudo_url
@@ -79,6 +93,8 @@ export async function getMatchesByTeam(teamId: number): Promise<Match[]> {
     WHERE m.home_team_id = ${teamId} OR m.away_team_id = ${teamId}
     ORDER BY m.matchday ASC, m.kickoff ASC NULLS LAST, m.id ASC
   `) as Match[]
+
+  return matches.map(normalizeFinishedMatch)
 }
 
 export async function getAllPlayers(): Promise<Player[]> {
@@ -96,9 +112,9 @@ export async function getGallery(): Promise<GalleryItem[]> {
 export async function getStandings(): Promise<StandingRow[]> {
   return (await sql`
     WITH results AS (
-      SELECT home_team_id AS team_id, home_score AS gf, away_score AS ga FROM matches WHERE status = 'finished' AND stage = 'group'
+      SELECT home_team_id AS team_id, COALESCE(home_score, 0) AS gf, COALESCE(away_score, 0) AS ga FROM matches WHERE status = 'finished' AND (stage = 'group' OR stage IS NULL)
       UNION ALL
-      SELECT away_team_id AS team_id, away_score AS gf, home_score AS ga FROM matches WHERE status = 'finished' AND stage = 'group'
+      SELECT away_team_id AS team_id, COALESCE(away_score, 0) AS gf, COALESCE(home_score, 0) AS ga FROM matches WHERE status = 'finished' AND (stage = 'group' OR stage IS NULL)
     )
     SELECT
       t.id AS team_id,
@@ -173,9 +189,12 @@ export async function getTournamentStats(): Promise<TournamentStats> {
     JOIN teams ht ON ht.id = m.home_team_id
     JOIN teams at ON at.id = m.away_team_id
     WHERE m.status = 'finished'
-    ORDER BY ABS(m.home_score - m.away_score) DESC, (m.home_score + m.away_score) DESC
+    ORDER BY ABS(COALESCE(m.home_score, 0) - COALESCE(m.away_score, 0)) DESC,
+      (COALESCE(m.home_score, 0) + COALESCE(m.away_score, 0)) DESC
     LIMIT 1
   `) as Match[]
+
+  const biggestWin = biggestWinRows[0] ? normalizeFinishedMatch(biggestWinRows[0]) : null
 
   return {
     totalGoals,
@@ -185,7 +204,7 @@ export async function getTournamentStats(): Promise<TournamentStats> {
     bestDefense: bestDefense
       ? { name: bestDefense.name, slug: bestDefense.slug, goals_against: bestDefense.goals_against }
       : null,
-    biggestWin: biggestWinRows[0] ?? null,
+    biggestWin,
   }
 }
 

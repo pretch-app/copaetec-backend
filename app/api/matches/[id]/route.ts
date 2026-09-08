@@ -54,8 +54,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         kickoff = COALESCE(${kickoff}, kickoff),
         matchday = COALESCE(${matchday}, matchday),
         venue = COALESCE(${venue}, venue),
-        home_score = COALESCE(${homeScore}, home_score),
-        away_score = COALESCE(${awayScore}, away_score)
+        home_score = CASE
+          WHEN COALESCE(${status}, status) = 'finished' THEN COALESCE(${homeScore}, home_score, 0)
+          ELSE COALESCE(${homeScore}, home_score)
+        END,
+        away_score = CASE
+          WHEN COALESCE(${status}, status) = 'finished' THEN COALESCE(${awayScore}, away_score, 0)
+          ELSE COALESCE(${awayScore}, away_score)
+        END
       WHERE id = ${id}
     `
 
