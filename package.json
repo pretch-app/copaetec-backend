@@ -12,6 +12,7 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:coverage": "vitest run --coverage",
+    "db:test:setup": "tsx scripts/setup-test-db.ts",
     "docs:generate": "tsx scripts/generate-openapi.ts",
     "docs:validate": "tsx scripts/validate-openapi.ts"
   },
