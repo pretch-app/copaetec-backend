@@ -5,6 +5,12 @@ import type { User } from "./types"
 
 const COOKIE_NAME = "etec_session"
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 // 24 horas
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+} as const
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET
   if (!secret) {
@@ -86,19 +92,19 @@ export async function createUserSession(userId: number, role: string) {
   // por lo que la cookie siempre es cross-origin: SameSite=None + Secure en producción.
   // En local (http://localhost) los navegadores igual la envían entre puertos porque
   // "site" no incluye el puerto, así que "lax" alcanza para desarrollo.
-  const crossOrigin = process.env.NODE_ENV === "production"
   store.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: crossOrigin ? "none" : "lax",
-    secure: crossOrigin,
-    path: "/",
+    ...SESSION_COOKIE_OPTIONS,
     maxAge: SESSION_DURATION_SECONDS,
   })
 }
 
 export async function destroySession() {
   const store = await cookies()
-  store.delete(COOKIE_NAME)
+  store.set(COOKIE_NAME, "", {
+    ...SESSION_COOKIE_OPTIONS,
+    maxAge: 0,
+    expires: new Date(0),
+  })
 }
 
 export async function getCurrentUser(): Promise<User | null> {
