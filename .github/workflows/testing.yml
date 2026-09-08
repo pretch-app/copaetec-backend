@@ -47,6 +47,9 @@ jobs:
             exit 1
           fi
 
+      - name: Prepare integration database
+        run: npm run db:test:setup
+
       - name: Lint
         run: npm run lint
 

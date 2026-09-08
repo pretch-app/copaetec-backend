@@ -1,7 +1,7 @@
 import { sql } from "./db"
 import { getMatchById } from "./queries"
 
-function calculatePoints(predHome: number, predAway: number, actualHome: number, actualAway: number): number {
+export function calculatePoints(predHome: number, predAway: number, actualHome: number, actualAway: number): number {
   if (predHome === actualHome && predAway === actualAway) return 5
 
   const predDiff = predHome - predAway
@@ -22,10 +22,12 @@ export async function calculateMatchPoints(matchId: number) {
     throw new Error("El partido no está finalizado o faltan resultados")
   }
 
+  const actualHome = match.home_score ?? 0
+  const actualAway = match.away_score ?? 0
   const predictions = await sql`SELECT id, predicted_home, predicted_away FROM predictions WHERE match_id = ${matchId}`
 
   for (const pred of predictions) {
-    const pts = calculatePoints(pred.predicted_home, pred.predicted_away, match.home_score, match.away_score)
+    const pts = calculatePoints(pred.predicted_home, pred.predicted_away, actualHome, actualAway)
     await sql`UPDATE predictions SET points_awarded = ${pts} WHERE id = ${pred.id}`
   }
 }
