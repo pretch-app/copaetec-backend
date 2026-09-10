@@ -437,6 +437,26 @@ paths:
       summary: Devuelve estadísticas del torneo
       responses:
         '200': { $ref: '#/components/responses/Object' }
+  /api/chat:
+    post:
+      tags: [Torneo]
+      summary: Responde una consulta en lenguaje natural sobre el torneo
+      description: >-
+        Asistente basado en reglas sobre los datos del torneo. Clasifica la
+        pregunta, resuelve el equipo mencionado y arma la respuesta desde la
+        base, sin modelos de lenguaje.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChatRequest' }
+      responses:
+        '200':
+          description: Respuesta del asistente
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ChatAnswer' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /api/settings:
     get:
       tags: [Torneo]
@@ -565,6 +585,44 @@ components:
         name: { type: string }
         captain: { type: string, nullable: true }
         grupo: { type: string, nullable: true }
+    ChatRequest:
+      type: object
+      required: [question]
+      properties:
+        question:
+          type: string
+          maxLength: 300
+          example: ¿Cuándo juega Los Pumas?
+    ChatAnswer:
+      type: object
+      required: [intent, answer, data, suggestions]
+      properties:
+        intent:
+          type: string
+          description: Intención detectada; `unknown` cuando no se entendió la pregunta.
+          enum:
+            - help
+            - standings
+            - top_scorers
+            - tournament_stats
+            - team_squad
+            - head_to_head
+            - team_next_matches
+            - team_recent_results
+            - team_summary
+            - upcoming_matches
+            - recent_results
+            - unknown
+        answer:
+          type: string
+          description: Respuesta lista para mostrar, con saltos de línea.
+        data:
+          type: object
+          description: Filas crudas que respaldan la respuesta, para renderizar tarjetas.
+        suggestions:
+          type: array
+          description: Preguntas de seguimiento sugeridas.
+          items: { type: string }
     Error:
       type: object
       required: [error]
@@ -601,5 +659,9 @@ components:
         application/json: { schema: { $ref: '#/components/schemas/Error' } }
     NotFound:
       description: Recurso no encontrado
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/Error' } }
+    TooManyRequests:
+      description: Demasiadas peticiones en poco tiempo
       content:
         application/json: { schema: { $ref: '#/components/schemas/Error' } }
