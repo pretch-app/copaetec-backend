@@ -113,12 +113,14 @@ export async function GET(request: Request) {
       // simplemente vinculamos la cuenta de Google a ese usuario y lo dejamos entrar.
       userId = existingUser[0].id
       userRole = existingUser[0].role
+      // Google ya verificó el email (email_verified), así que la cuenta queda activada.
+      await sql`UPDATE users SET email_verified_at = NOW() WHERE id = ${userId} AND email_verified_at IS NULL`
     } else {
       // Usuario nuevo: Insertamos en la DB con un hash de contraseña falso ("OAUTH:...")
       const dummyHash = "OAUTH:" + randomBytes(16).toString("hex")
       const inserted = await sql`
-        INSERT INTO users (email, display_name, password_hash, role)
-        VALUES (${email}, ${name}, ${dummyHash}, 'user')
+        INSERT INTO users (email, display_name, password_hash, role, email_verified_at)
+        VALUES (${email}, ${name}, ${dummyHash}, 'user', NOW())
         RETURNING id, role
       `
       userId = inserted[0].id

@@ -24,6 +24,10 @@ Copiar `.env.example` a `.env.local` y completar:
 | `BLOB_READ_WRITE_TOKEN` | Token de Vercel Blob Storage |
 | `FRONTEND_URL` | URL pública del frontend, usada para redirigir después del login con Google |
 | `ALLOWED_ORIGINS` | Orígenes permitidos por CORS (coma-separados). Debe incluir la URL del frontend |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | Servidor SMTP para los correos de activación. Sin `SMTP_HOST`, en desarrollo el correo se imprime en consola; en producción el registro falla |
+| `MAIL_FROM` | Remitente de los correos (por defecto `Copa ETec <no-reply@copaetec.online>`) |
+| `API_URL` | URL pública de este backend, usada para armar el link de activación (opcional; si falta se toma del request) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Usuario admin que siembra `scripts/migrate-prode.ts` (email por defecto `admin@copaetec.online`) |
 
 ## Desarrollo local
 
@@ -58,10 +62,14 @@ Sesión basada en cookie httpOnly (`etec_session`, JWT firmado a mano) seteada p
 
 - `GET /api/auth/google` — redirige a Google para iniciar sesión (navegación directa del browser, no fetch)
 - `GET /api/auth/callback/google` — callback de Google, crea/vincula el usuario y redirige a `FRONTEND_URL`
-- `POST /api/auth/login` — `{ email, password }`
-- `POST /api/auth/register` — `{ name, email, password, confirmPassword }`
+- `POST /api/auth/login` — `{ email, password }`. Si la cuenta no está activada responde `403` con `code: "EMAIL_NOT_VERIFIED"`
+- `POST /api/auth/register` — `{ name, email, password, confirmPassword }`. Crea la cuenta sin sesión, envía el correo de activación y responde `201` con `{ success, pendingVerification: true }`
+- `GET /api/auth/verify?token=...` — destino del link del correo: activa la cuenta y redirige a `FRONTEND_URL/auth/login?verified=1` (o `?error=InvalidVerificationToken` si el link venció o ya se usó). Los links duran 24 horas y sirven una sola vez
+- `POST /api/auth/resend-verification` — `{ email }`. Reenvía el link (invalida los anteriores). Siempre responde lo mismo, para no revelar qué emails existen
 - `POST /api/auth/logout`
 - `GET /api/auth/me` — usuario actual (`{ user: User | null }`)
+
+Las cuentas creadas con Google quedan activadas directamente, porque Google ya verificó el email. Para preparar una base existente hay que correr `npx tsx scripts/migrate-email-verification.ts` una vez: agrega `users.email_verified_at` y la tabla `email_verification_tokens`, da por verificadas las cuentas que ya existían y renombra el admin `admin@copaetec.com` a `ADMIN_EMAIL`.
 
 ## Endpoints
 

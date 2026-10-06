@@ -40,19 +40,67 @@ paths:
         '200': { $ref: '#/components/responses/Success' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: La cuenta todavía no fue activada desde el correo
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/EmailNotVerifiedError' } }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /api/auth/register:
     post:
       tags: [Autenticación]
-      summary: Registra un usuario
+      summary: Registra un usuario y le envía el correo de activación
+      description: La cuenta se crea sin sesión. Para iniciar sesión hay que activarla con el link del correo.
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/RegisterRequest' }
       responses:
-        '200': { $ref: '#/components/responses/Success' }
+        '201':
+          description: Usuario creado, pendiente de activación
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/PendingVerification' } }
         '400': { $ref: '#/components/responses/BadRequest' }
         '409': { description: El email ya está registrado }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '502':
+          description: No se pudo enviar el correo de activación; el alta se deshace
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Error' } }
+  /api/auth/verify:
+    get:
+      tags: [Autenticación]
+      summary: Activa una cuenta con el token del correo
+      description: Se abre desde el link del correo. Cada token dura 24 horas y sirve una sola vez.
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '302':
+          description: >-
+            Redirección a `FRONTEND_URL/auth/login?verified=1`, o a
+            `?error=InvalidVerificationToken` si el token no existe, venció o ya se usó.
+  /api/auth/resend-verification:
+    post:
+      tags: [Autenticación]
+      summary: Reenvía el correo de activación
+      description: >-
+        Invalida los links anteriores. Responde lo mismo exista o no el email,
+        para no revelar qué cuentas están registradas.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResendVerificationRequest' }
+      responses:
+        '200':
+          description: Pedido aceptado
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Success' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /api/auth/logout:
     post:
       tags: [Autenticación]
@@ -578,6 +626,23 @@ components:
         email: { type: string, format: email }
         password: { type: string, minLength: 6, format: password }
         confirmPassword: { type: string, format: password }
+    ResendVerificationRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    PendingVerification:
+      type: object
+      required: [success, pendingVerification]
+      properties:
+        success: { type: boolean, example: true }
+        pendingVerification: { type: boolean, example: true }
+    EmailNotVerifiedError:
+      type: object
+      required: [error, code]
+      properties:
+        error: { type: string }
+        code: { type: string, enum: [EMAIL_NOT_VERIFIED] }
     TeamRequest:
       type: object
       required: [name]

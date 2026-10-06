@@ -1,9 +1,10 @@
 import { sql } from "@/lib/db"
-import { hashPassword, createUserSession } from "@/lib/auth"
+import { hashPassword } from "@/lib/auth"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { getClientIp, validateRequestOrigin } from "@/lib/api-helpers"
 import { jsonCors, preflight } from "@/lib/cors"
 import { isAllowedEmailDomain } from "@/lib/email"
+import { sendVerificationEmail } from "@/lib/verification"
 
 export async function OPTIONS(request: Request) {
   return preflight(request)
@@ -42,12 +43,22 @@ export async function POST(request: Request) {
     const inserted = await sql`
       INSERT INTO users (email, display_name, password_hash, role)
       VALUES (${email}, ${name}, ${hash}, 'user')
-      RETURNING id, role
+      RETURNING id, email, display_name
     `
-    const user = inserted[0]
+    const user = inserted[0] as { id: number; email: string; display_name: string }
 
-    await createUserSession(user.id, user.role)
-    return jsonCors(request, { success: true })
+    // La sesión recién se abre al hacer login con la cuenta ya activada.
+    try {
+      await sendVerificationEmail(request, user)
+    } catch (mailErr) {
+      // Si el correo no sale, se deshace el alta para que la persona pueda reintentar
+      // el registro en vez de quedar con una cuenta que nunca va a poder activar.
+      console.error("[Register Mail Error]:", mailErr)
+      await sql`DELETE FROM users WHERE id = ${user.id}`
+      return jsonCors(request, { error: "No pudimos enviar el correo de activación. Intenta de nuevo más tarde." }, 502)
+    }
+
+    return jsonCors(request, { success: true, pendingVerification: true }, 201)
   } catch (err) {
     console.error("[Register Error]:", err)
     return jsonCors(request, { error: "Error al registrar usuario." }, 500)
