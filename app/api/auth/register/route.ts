@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
   try {
     const existing = await sql`SELECT id FROM users WHERE email = ${email} LIMIT 1`
-    if (existing.length > 0) return jsonCors(request, { error: "El email ya está registrado" }, 409)
+    if (existing.length > 0) return jsonCors(request, { error: "El email ya está registrado. Si entraste con Google, usá \"Continuar con Google\"." }, 409)
 
     const hash = hashPassword(password)
 
