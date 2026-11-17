@@ -66,10 +66,12 @@ Sesión basada en cookie httpOnly (`etec_session`, JWT firmado a mano) seteada p
 - `POST /api/auth/register` — `{ name, email, password, confirmPassword }`. Crea la cuenta sin sesión, envía el correo de activación y responde `201` con `{ success, pendingVerification: true }`
 - `GET /api/auth/verify?token=...` — destino del link del correo: activa la cuenta y redirige a `FRONTEND_URL/auth/login?verified=1` (o `?error=InvalidVerificationToken` si el link venció o ya se usó). Los links duran 24 horas y sirven una sola vez
 - `POST /api/auth/resend-verification` — `{ email }`. Reenvía el link (invalida los anteriores). Siempre responde lo mismo, para no revelar qué emails existen
+- `POST /api/auth/forgot-password` — `{ email }`. Manda un link a `FRONTEND_URL/auth/restablecer?token=...` para elegir una contraseña nueva (vence en 60 minutos, sirve una vez). Sirve también para cuentas creadas con Google. Siempre responde lo mismo
+- `POST /api/auth/reset-password` — `{ token, password, confirmPassword }`. Cambia la contraseña y, si la cuenta no estaba activada, la activa. Un link vencido o usado responde `400` con `code: "INVALID_RESET_TOKEN"`
 - `POST /api/auth/logout`
 - `GET /api/auth/me` — usuario actual (`{ user: User | null }`)
 
-Las cuentas creadas con Google quedan activadas directamente, porque Google ya verificó el email. Para preparar una base existente hay que correr `npx tsx scripts/migrate-email-verification.ts` una vez: agrega `users.email_verified_at` y la tabla `email_verification_tokens`, da por verificadas las cuentas que ya existían y renombra el admin `admin@copaetec.com` a `ADMIN_EMAIL`.
+Las cuentas creadas con Google quedan activadas directamente, porque Google ya verificó el email. Para preparar una base existente hay que correr `npx tsx scripts/migrate-email-verification.ts` una vez: agrega `users.email_verified_at` y las tablas `email_verification_tokens` y `password_reset_tokens`, da por verificadas las cuentas que ya existían y renombra el admin `admin@copaetec.com` a `ADMIN_EMAIL`.
 
 ## Endpoints
 

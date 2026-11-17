@@ -47,6 +47,22 @@ async function main() {
     ON email_verification_tokens(user_id)
   `
 
+  // Links de "olvidé mi contraseña": mismo esquema que los de activación (solo se guarda el hash).
+  await sql`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at    TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user
+    ON password_reset_tokens(user_id)
+  `
+
   // El admin se sembraba con un dominio (.com) que no existe; se pasa al real.
   const adminEmail = (process.env.ADMIN_EMAIL ?? "admin@copaetec.online").toLowerCase().trim()
   const renamed = await sql`

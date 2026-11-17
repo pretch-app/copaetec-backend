@@ -214,6 +214,73 @@
         }
       }
     },
+    "/api/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Envía un link para elegir una contraseña nueva",
+        "description": "Sirve también para cuentas creadas con Google. El link apunta a FRONTEND_URL/auth/restablecer, vence en 60 minutos y sirve una sola vez; pedir otro invalida los anteriores. Responde lo mismo exista o no el email, para no revelar qué cuentas están registradas.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendVerificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pedido aceptado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/api/auth/reset-password": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Cambia la contraseña con el link del correo",
+        "description": "Consume el token y guarda la contraseña nueva. Si la cuenta no estaba activada, también la activa. No abre sesión. Un token vencido, usado o desconocido responde 400 con code INVALID_RESET_TOKEN.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
     "/api/auth/logout": {
       "post": {
         "tags": [
@@ -1544,6 +1611,28 @@
           "email": {
             "type": "string",
             "format": "email"
+          }
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "required": [
+          "token",
+          "password",
+          "confirmPassword"
+        ],
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "format": "password"
+          },
+          "confirmPassword": {
+            "type": "string",
+            "format": "password"
           }
         }
       },
