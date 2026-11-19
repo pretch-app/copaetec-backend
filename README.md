@@ -43,7 +43,7 @@ Corre en `http://localhost:4000`. El frontend debe correr en un puerto distinto 
 Los Pull Requests hacia `main` ejecutan automáticamente los workflows de GitHub Actions ubicados en `.github/workflows/`:
 
 - Testing: lint, typecheck, pruebas unitarias e integrales con cobertura (contra la base configurada en `DATABASE_URL_TEST`) y build. Si la cobertura baja del 60% en líneas, sentencias, funciones o ramas, el PR falla. El reporte queda como artifact `coverage-report`.
-- Documentation: generación y validación de `docs/openapi.json` a partir de `docs/openapi.yaml`.
+- Documentation: generación y validación de `docs/openapi.json` a partir de `docs/openapi.yaml`. Al mergear a `main`, publica la documentación con Swagger UI en **https://pretch-app.github.io/copaetec-backend/** (GitHub Pages).
 
 La variable `DATABASE_URL_TEST` debe apuntar a una base Neon exclusiva para pruebas. No debe contener la URL de producción. En GitHub se configura como un secreto del repositorio con ese mismo nombre. Estos workflows no modifican la configuración de Vercel ni sus despliegues automáticos.
 

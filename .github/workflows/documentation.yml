@@ -45,3 +45,39 @@ jobs:
           name: openapi-documentation
           path: docs/openapi.json
           if-no-files-found: error
+
+  publish:
+    name: Publish Swagger UI to GitHub Pages
+    # Solo al mergear a main: los PRs validan la documentación pero no la publican.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: openapi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build site
+        run: |
+          mkdir -p site
+          cp docs/swagger/index.html site/index.html
+          cp docs/openapi.json site/openapi.json
+          cp docs/openapi.yaml site/openapi.yaml
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Copa ETec API · Documentación</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css" />
+    <style>
+      body { margin: 0; background: #fafafa; }
+      .aviso {
+        margin: 0;
+        padding: 10px 16px;
+        background: #fff7e6;
+        border-bottom: 1px solid #f0d9a8;
+        font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #5c4400;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Página que publica el workflow de documentación en GitHub Pages junto con openapi.json. -->
+    <p class="aviso">
+      Documentación generada desde <code>docs/openapi.yaml</code> en cada merge a <code>main</code>.
+      Los pedidos de prueba están desactivados: la API solo acepta llamadas desde el frontend (CORS).
+    </p>
+    <div id="swagger-ui"></div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js" crossorigin></script>
+    <script>
+      window.ui = SwaggerUIBundle({
+        url: "./openapi.json",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        docExpansion: "list",
+        defaultModelsExpandDepth: 0,
+        supportedSubmitMethods: [],
+      })
+    </script>
+  </body>
+</html>
