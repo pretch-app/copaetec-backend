@@ -22,6 +22,7 @@ async function main() {
       password_hash TEXT NOT NULL,
       role          TEXT NOT NULL DEFAULT 'user'
                     CHECK (role IN ('user', 'admin')),
+      email_verified_at TIMESTAMPTZ,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `
@@ -65,14 +66,15 @@ async function main() {
     const derivedKey = scryptSync(adminPassword, salt, 64).toString('hex')
     const hash = `${salt}:${derivedKey}`
 
-    const existingAdmin = await sql`SELECT id FROM users WHERE email = 'admin@copaetec.com' LIMIT 1`
+    const adminEmail = (process.env.ADMIN_EMAIL ?? "admin@copaetec.online").toLowerCase().trim()
+    const existingAdmin = await sql`SELECT id FROM users WHERE email = ${adminEmail} LIMIT 1`
     
     if (existingAdmin.length === 0) {
       await sql`
-        INSERT INTO users (email, display_name, password_hash, role)
-        VALUES ('admin@copaetec.com', 'Administrador', ${hash}, 'admin')
+        INSERT INTO users (email, display_name, password_hash, role, email_verified_at)
+        VALUES (${adminEmail}, 'Administrador', ${hash}, 'admin', NOW())
       `
-      console.log("Usuario admin creado exitosamente (admin@copaetec.com)")
+      console.log(`Usuario admin creado exitosamente (${adminEmail})`)
     } else {
       console.log("El usuario admin ya existe.")
     }

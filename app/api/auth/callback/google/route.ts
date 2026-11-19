@@ -103,7 +103,7 @@ export async function GET(request: Request) {
     cookieStore.delete("oauth_nonce")
 
     // Buscar si el usuario ya existe en la base de datos
-    const existingUser = await sql`SELECT id, role FROM users WHERE email = ${email} LIMIT 1`
+    const existingUser = await sql`SELECT id, role, email_verified_at FROM users WHERE email = ${email} LIMIT 1`
 
     let userId: number
     let userRole: string
@@ -113,12 +113,24 @@ export async function GET(request: Request) {
       // simplemente vinculamos la cuenta de Google a ese usuario y lo dejamos entrar.
       userId = existingUser[0].id
       userRole = existingUser[0].role
+      if (!existingUser[0].email_verified_at) {
+        // Cuenta registrada con contraseña pero nunca activada: quien la creó no probó ser
+        // dueño del email. Google sí lo probó, así que se descarta esa contraseña (si no,
+        // alguien podría registrar el email de otra persona y entrar cuando ella use Google)
+        // y se invalidan los links de activación pendientes.
+        const dummyHash = "OAUTH:" + randomBytes(16).toString("hex")
+        await sql`
+          UPDATE users SET email_verified_at = NOW(), password_hash = ${dummyHash}
+          WHERE id = ${userId} AND email_verified_at IS NULL
+        `
+        await sql`DELETE FROM email_verification_tokens WHERE user_id = ${userId} AND used_at IS NULL`
+      }
     } else {
       // Usuario nuevo: Insertamos en la DB con un hash de contraseña falso ("OAUTH:...")
       const dummyHash = "OAUTH:" + randomBytes(16).toString("hex")
       const inserted = await sql`
-        INSERT INTO users (email, display_name, password_hash, role)
-        VALUES (${email}, ${name}, ${dummyHash}, 'user')
+        INSERT INTO users (email, display_name, password_hash, role, email_verified_at)
+        VALUES (${email}, ${name}, ${dummyHash}, 'user', NOW())
         RETURNING id, role
       `
       userId = inserted[0].id

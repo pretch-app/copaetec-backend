@@ -23,11 +23,20 @@ export async function POST(request: Request) {
   if (!email || !password) return jsonCors(request, { error: "Faltan datos" }, 400)
 
   try {
-    const rows = await sql`SELECT id, password_hash, role FROM users WHERE email = ${email} LIMIT 1`
+    const rows = await sql`SELECT id, password_hash, role, email_verified_at FROM users WHERE email = ${email} LIMIT 1`
     const user = rows[0]
 
     if (!user || !verifyPasswordHash(password, user.password_hash)) {
       return jsonCors(request, { error: "Email o contraseña incorrectos" }, 401)
+    }
+
+    // Se chequea después de la contraseña para no revelar qué emails están registrados.
+    if (!user.email_verified_at) {
+      return jsonCors(
+        request,
+        { error: "Tenés que activar tu cuenta desde el correo que te enviamos.", code: "EMAIL_NOT_VERIFIED" },
+        403,
+      )
     }
 
     await createUserSession(user.id, user.role)
