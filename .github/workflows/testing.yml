@@ -56,11 +56,16 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit tests
-        run: npm run test:unit
+      - name: Unit and integration tests with coverage (min 60%)
+        run: npm run test:coverage
 
-      - name: Integration tests
-        run: npm run test:integration
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+          if-no-files-found: ignore
 
       - name: Build
         run: npm run build
