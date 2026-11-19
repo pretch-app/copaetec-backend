@@ -4,8 +4,10 @@ info:
   version: 0.1.0
   description: API REST del torneo Copa ETec.
 servers:
-  - url: /
-    description: Servidor donde está desplegada la API
+  - url: https://copaetec-backend.vercel.app
+    description: Producción
+  - url: http://localhost:4000
+    description: Desarrollo local
 tags:
   - name: Autenticación
   - name: Torneo

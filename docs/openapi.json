@@ -7,8 +7,12 @@
   },
   "servers": [
     {
-      "url": "/",
-      "description": "Servidor donde está desplegada la API"
+      "url": "https://copaetec-backend.vercel.app",
+      "description": "Producción"
+    },
+    {
+      "url": "http://localhost:4000",
+      "description": "Desarrollo local"
     }
   ],
   "tags": [
